@@ -1,0 +1,97 @@
+---
+title: "Homework 6"
+author: Suhani Patel 
+date: 2021-11-23
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    code_folding: hide
+    theme: yeti
+    highlight: haddock
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = FALSE) 
+```
+
+```{r}
+library(tidyverse)
+library(MASS)
+```
+
+# Problem 1
+*****
+
+### Load and Clean
+Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
+```{r}
+birthweight = read_csv(file = "./data/birthweight.csv", na = c("")) %>% 
+  janitor::clean_names() %>% 
+    mutate(
+      babysex = factor(babysex),
+      frace = factor(frace),
+      malform = factor(malform),
+      mrace = factor(mrace))
+```
+
+### Model Building
+Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process  
+
+## Backward Selection
+Starting with all variables in the model, we will remove one variable at a time with the highest AIC until we have the resulting best final model. To do this, we will use stepAIC in the MASS package. 
+
+```{r}
+# Fit the full model 
+full.model <- lm(bwt ~., data = birthweight)
+
+# Stepwise regression model
+step.model = stepAIC(full.model, direction = "backward", 
+                      trace = FALSE) %>%   
+  broom::tidy() %>% 
+  arrange(p.value)
+```
+
+### Final Model
+```{r}
+fit = lm(bwt ~ bhead + blength + mrace + delwt + smoken + gaweeks + ppwt + mrace + mheight + babysex + parity + fincome + mrace, data = birthweight)
+```
+
+### Plot of Residuals 
+show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+```{r}
+plot = birthweight %>% 
+  modelr::add_residuals(fit) %>% 
+  modelr::add_predictions(fit) %>% 
+  ggplot(aes(x = pred, y = resid)) + geom_violin()
+
+plot
+
+```
+
+### Comparison of Models
+Compare your model to two others:
+- One using length at birth and gestational age as predictors (main effects only)
+- One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+```{r}
+model_2 = lm(bwt ~ blength + gaweeks, data = birthweight)
+
+model_2 = model_2 %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) 
+```
+
+```{r}
+model_3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birthweight)
+
+model_3 = model_3 %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) 
+```
+
+### Cross-validated prediction error
+Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+
+# Problem 2
+*****
